@@ -17,7 +17,9 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     GTAVPRTDB.MkPlate
-                     , GTAVPRTDB.SpiltVGPF
+                     , GTAVPRTDB.SplitVGPF
+                     , GTAVPRTDB.Binary
+                     , GTAVPRTDB.Generate
   -- other-modules:       
   other-extensions:    DataKinds
                      , FlexibleContexts
@@ -31,5 +33,10 @@ library
                      , vector
                      , opencv
                      , linear
+                     , binary
+                     , repa
+                     , lzma
+                     , split
+                     , MonadRandom
   hs-source-dirs:      src
   default-language:    Haskell2010

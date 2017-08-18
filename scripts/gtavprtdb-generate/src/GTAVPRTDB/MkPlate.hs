@@ -43,42 +43,43 @@ loadFonts fp = do
   where loadImg :: FilePath -> IO CharImg
         loadImg fn =  exceptError . coerceMat . imdecode ImreadUnchanged <$> B.readFile fn
 
-type RGBFunc = PlateImg 1 -> PlateImg 1 -> [PlateImg 1] -- | mask -> blank -> [channels]
+-- | mask -> blank -> plate -> plate
+type RGBFunc = PlateImg 1 -> PlateImg 1 -> PlateImg 3 -> PlateImg 3
 
 blueMask :: RGBFunc
-blueMask mask blank = [blank,mask,mask]
-rgbMask :: Double -- ^ R
-        -> Double -- ^ G
-        -> Double -- ^ B
-        -> RGBFunc
-rgbMask r g b mask _ = map (\c -> mask `matScalarMult` c) [b,g,r]
+blueMask mask blank plate = matSubtract plate $ exceptError $ coerceMat $ matMerge $ V.fromList [blank,mask,mask]
+yellowMask :: RGBFunc
+yellowMask mask blank plate = matAdd plate $ exceptError $ coerceMat $ matMerge $ V.fromList
+  [ blank
+  , matScalarMult mask 0.65
+  , matScalarMult mask 0.96
+  ]
 
 mkMask :: M.Map Char CharImg -- ^ fonts
-       -> RGBFunc -- ^ create RGb or rGB or RgB (lower case means blank)
        -> String -- ^ plate number
-       -> PlateImg 3
-mkMask maps rgbFunc plate' = exceptError . coerceMat . matMerge $ V.fromList $ rgbFunc maskr blkImg'
+       -> (PlateImg 1,PlateImg 1)
+mkMask maps plate' = (maskr,blkImg)
   where plate = let p = map toUpper $ take 8 plate'
                 in if all (`elem` fontList) p then p else error ("unexcepted: " ++ plate')
         appendImg :: PlateImg 1 -> (Int32,CharImg) -> PlateImg 1
         appendImg blk (i,img) = exceptError $ matCopyTo blk (V2 (18 + 28*i) 49) img Nothing -- 20 -> y; 2+10*i -> x
-        blkImg' :: PlateImg 1
-        blkImg' = exceptError . coerceMat . exceptError $ mkMat [128,256 :: Int32] (1 :: Int32) Depth_8U (V4 0 0 0 0 :: V4 Double)
-        blkImg  = cloneMat blkImg'
+        blkImg :: PlateImg 1
+        blkImg = exceptError . coerceMat . exceptError $ mkMat [128,256 :: Int32] (1 :: Int32) Depth_8U (V4 0 0 0 0 :: V4 Double)
         maskr   :: PlateImg 1
         maskr   = foldl' appendImg blkImg $ zip [0..7] $ map (maps M.!) plate
 
-maskPlate :: PlateImg 3 -- ^ plate
-          -> PlateImg 3 -- ^ mask
+maskPlate :: RGBFunc -- ^ create RGb or rGB or RgB (lower case means blank)
+          -> PlateImg 3 -- ^ plate
+          -> (PlateImg 1,PlateImg 1) -- ^ mask
           -> PlateImg 3 -- ^ rt
-maskPlate = matSubtract
+maskPlate func p (m,b) = func m b p
 
 mkPlate ::  M.Map Char CharImg -- ^ fonts
         -> RGBFunc -- ^ create RGb or rGB or RgB (lower case means blank)
         -> String -- ^ plate number
         -> PlateImg 3 -- ^ plate
         -> PlateImg 3 -- ^ plate
-mkPlate maps rgbFunc plateNumber plateImg = plateImg `maskPlate` mkMask maps rgbFunc plateNumber
+mkPlate maps rgbFunc plateNumber plateImg = maskPlate rgbFunc plateImg $ mkMask maps plateNumber
 
 loadPlateImg :: FilePath
              -> IO (PlateImg 3)
@@ -116,6 +117,9 @@ perspectiveTransformPlate off plate = tnsRecord
         ptMat = getPerspectiveTransform (V.fromList $ toCFloat <$> rawPoints) (V.fromList $ toCFloat <$> offPoints)
         tnsRecord = exceptError $ warpPerspective rawWithPlate  ptMat InterCubic False True (BorderConstant $ toScalar (V4 0 0 0 0 :: V4 Double))
 
+perspectiveTransformKeyPoints :: Num a => [V2 a] -> [V2 a]
+perspectiveTransformKeyPoints off = zipWith (+) off  [V2 352 204,V2 608 204, V2 352 332, V2 608 332]
+
 {- |
 
 @
@@ -139,7 +143,7 @@ loadAnyImg :: (ToShapeDS (Proxy shape), ToChannelsDS (Proxy channels), ToDepthDS
 loadAnyImg m fp = exceptError . coerceMat . imdecode m <$> B.readFile fp
 
 
-addPlateToBG :: RecordImg 3
+addPlateToBG :: RecordImg 3 -- ^ background
              -> RecordImg 3
              -> RecordImg 3
 addPlateToBG bg plate = exceptError $ matCopyTo bg (V2 0 0) plate (Just $ exceptError $ cvtColor bgr gray plate)
