@@ -9,18 +9,18 @@
 {-# LANGUAGE PackageImports       #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module SplitVGPF where
+module GTAVPRTDB.SplitVGPF where
 
-import           "transformers" Control.Monad.Trans.Except
-import qualified "bytestring" Data.ByteString            as B
+import           Control.Monad.Trans.Except
+import qualified Data.ByteString            as B
 import           Data.Int
 import           Data.Monoid
 import           Data.Word
-import           "linear" Linear.V2                  (V2 (..))
-import           "linear" Linear.V3                  (V3 (..))
-import           "linear" Linear.V4                  (V4 (..))
-import           "linear" Linear.Vector              (zero, (^+^))
-import           "opencv" OpenCV
+import           Linear.V2                  (V2 (..))
+import           Linear.V3                  (V3 (..))
+import           Linear.V4                  (V4 (..))
+import           Linear.Vector              (zero, (^+^))
+import           OpenCV
 
 type TextureImg = Mat (ShapeT [168,448]) ('S 1) ('S Word8)
 type CharImg    = Mat (ShapeT [56 ,28 ]) ('S 1) ('S Word8)

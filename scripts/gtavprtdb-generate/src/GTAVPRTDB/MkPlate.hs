@@ -9,24 +9,24 @@
 {-# LANGUAGE PackageImports       #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module MkPlate where
+module GTAVPRTDB.MkPlate where
 
-import           "transformers" Control.Monad.Trans.Except
-import qualified "bytestring" Data.ByteString            as B
+import           Control.Monad.Trans.Except
+import qualified Data.ByteString            as B
 import           Data.Char
 import           Data.Int
 import           Data.List                  (foldl')
-import qualified "containers" Data.Map                   as M
+import qualified Data.Map                   as M
 import           Data.Monoid
 import           Data.Proxy
-import qualified "vector" Data.Vector                as V
+import qualified Data.Vector                as V
 import           Data.Word
 import           Foreign.C.Types
-import           "linear" Linear.V2                  (V2 (..))
-import           "linear" Linear.V3                  (V3 (..))
-import           "linear" Linear.V4                  (V4 (..))
-import           "linear" Linear.Vector              (zero, (^+^))
-import           "opencv" OpenCV
+import           Linear.V2                  (V2 (..))
+import           Linear.V3                  (V3 (..))
+import           Linear.V4                  (V4 (..))
+import           Linear.Vector              (zero, (^+^))
+import           OpenCV
 
 type CharImg     = Mat (ShapeT [56 ,28 ]) ('S 1) ('S Word8)
 type PlateImg  a = Mat (ShapeT [128,256]) ('S a) ('S Word8)
