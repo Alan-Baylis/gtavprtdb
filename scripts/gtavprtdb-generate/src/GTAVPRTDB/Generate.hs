@@ -60,8 +60,8 @@ generateImg fp bgFiles = do
         loadBg n = loadAnyImg ImreadUnchanged  $ fp ++ '/' : n
 
 
-generateOffset :: Float -- ^ alpha |/  (for z axis) \in [-45,45]
-               -> Float -- ^ beta  _/_ (for h(or x) axis \in [-60,60]
+generateOffset :: Float -- ^ alpha |/  (for z-x axis) \in [-45,45]
+               -> Float -- ^ beta  _/_ (for z-y axis) \in [-45,45]
                -> Float -- ^ gamma \in [0.65,1.45]
                -> PointOffset Float
 generateOffset a' b' g = [ V2 (-dH) (-dV)
@@ -73,18 +73,25 @@ generateOffset a' b' g = [ V2 (-dH) (-dV)
         f al = 1 + sin al
         h = 256
         v = 168
-        dLTX 
-        dLTY
-        dRTX
-        dRTY
-        dLBX
-        dLBY
-        dRBX
-        dRBY
+            -- x     y
+        dLTX = f a + o a
+        dLTY = o a + f a
+        dRTX = o a + f a
+        dRTY = f a + f a
+        dLBX = f a + f a
+        dLBY = f a + o a
+        dRBX = o a + o a
+        dRBY = o a + o a
         dV = o a * sin b
-        a'' = a' / 180 * pi
-        b'' = b' / 180 * pi
-        a = a'' * cos b''
-        b = a'' * sin b''
+        a = a' / 180 * pi
+        b = b' / 180 * pi
+
+
+
+
+
+
+
+
 
 
