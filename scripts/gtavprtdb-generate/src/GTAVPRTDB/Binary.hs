@@ -68,4 +68,5 @@ toLabels :: [V2 Int32] -> Label
 toLabels = let to (V2 a b) = fromIntegral <$> [a,b]
            in V.fromList . concat . map to
 
-
+renderFileI :: FilePath -> [RecordImg 3] -> IO ()
+parseFileI :: FilePath -> IO [Img]
