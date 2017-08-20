@@ -19,7 +19,7 @@ module GTAVPRTDB.Generate
   ( generateSeedViaParameter
   , generateSeed
   , generateImgWithSeed
-  , generateImg
+  , generateImgs
   , generateOffset
   ) where
 
@@ -102,10 +102,10 @@ generateImgWithSeed maps platebgs bg Seed{..} =
   in return (record,V.fromList (round is:ls))
 
 -- | generate images
-generateImg :: FilePath
-            -> [FilePath]
-            -> IO ([RecordImg 3],[V.Vector Int16])
-generateImg fp bgFiles = do
+generateImgs :: FilePath
+             -> [FilePath]
+             -> IO ([RecordImg 3],[V.Vector Int16])
+generateImgs fp bgFiles = do
   maps  <- loadFonts fp
   platebgs <- mapM (\i -> loadPlateImg $ fp ++ "plate0" ++ show i ++ ".jpg")
               [1..5]
