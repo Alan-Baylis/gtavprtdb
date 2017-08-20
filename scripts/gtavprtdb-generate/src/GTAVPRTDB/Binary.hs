@@ -102,12 +102,12 @@ toImg = V.fromList . R.toList . toRepa
 -- | transform to label
 toLabel :: [V2 Int32] -> Label
 toLabel = let to (V2 a b) = fromIntegral <$> [a,b]
-           in V.fromList . concat . map to
+           in V.fromList . (1:) . concat . map to
 
 -- | transform from label
 fromLabel :: Label -> [V2 Int32]
 fromLabel = let from (a:b:_) = fromIntegral <$> V2 a b
-            in map from . chunksOf 2 . V.toList
+            in map from . chunksOf 2 . tail . V.toList
 
 -- | render the traning data(file)
 renderFileI :: FilePath -> [RecordImg 3] -> IO ()

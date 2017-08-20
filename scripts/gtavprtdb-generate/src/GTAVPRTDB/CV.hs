@@ -20,7 +20,8 @@ module GTAVPRTDB.CV
 
 import           Data.Proxy
 import           GTAVPRTDB.Types
-import Control.Monad.Trans
+import           Control.Monad.Trans
+import           Control.Monad.ST
 
 -- | resize the image (background)
 resizeBg :: Mat (S '[height, width]) channels depth
@@ -33,9 +34,10 @@ resizeBg = exceptError . coerceMat . exceptError
 drawKeyPoint :: PointOffset Int32
              -> RecordImg 3
              -> RecordImg 3
-drawKeyPoint off plate = exceptError $ withMatM
-  (Proxy :: Proxy [536, 960])
-  (Proxy :: Proxy 3)
-  (Proxy :: Proxy Word8)
-  (V4 0 0 0 0 :: V4 Double) $ \imgM -> do
-  lift $ mapM_ (\x -> circle imgM x 10 (V4 0 0 1 0 :: V4 Double) (-1) LineType_AA 0) off
+drawKeyPoint off plate = exceptError $ runST $ do
+  p <- thaw plate
+  eResult <- runExceptT $ mapM_
+    (\x -> circle p x 10 (V4 0 0 1 0 :: V4 Double) (-1) LineType_AA 0) off
+  case eResult of
+    Left err -> pure $ throwE err
+    Right () -> pure <$> unsafeFreeze p

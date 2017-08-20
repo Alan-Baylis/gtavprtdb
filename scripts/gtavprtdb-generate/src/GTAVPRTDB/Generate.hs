@@ -114,7 +114,7 @@ generateImgs fp bgFiles = do
   where create maps platebgs bg = generateSeedViaParameter
           >>= generateImgWithSeed maps platebgs bg
         loadBg :: String -> IO (RecordImg 3)
-        loadBg n = loadAnyImg ImreadUnchanged  $ fp ++ '/' : n
+        loadBg n = loadAnyImg ImreadUnchanged n
 
 -- | generate offset with angles and other parameters
 generateOffset :: Float -- ^ alpha |/  (for z-x axis) \in [-45,45]
