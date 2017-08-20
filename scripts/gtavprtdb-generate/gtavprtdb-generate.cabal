@@ -16,10 +16,12 @@ extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     GTAVPRTDB.MkPlate
-                     , GTAVPRTDB.SplitVGPF
+  exposed-modules:     GTAVPRTDB.Plate
+                     , GTAVPRTDB.Texture
                      , GTAVPRTDB.Binary
                      , GTAVPRTDB.Generate
+                     , GTAVPRTDB.Types
+                     , GTAVPRTDB.CV
   -- other-modules:       
   other-extensions:    DataKinds
                      , FlexibleContexts
