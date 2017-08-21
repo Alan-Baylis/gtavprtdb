@@ -38,6 +38,12 @@ resolver: lts-9.1
 packages:
 - scripts/gtavprtdb-generate
 - scripts/gtavprtdb-exec
+- scripts/gtavprtdb-cnn
+- third/tensorflow/tensorflow
+- third/tensorflow/tensorflow-core-ops
+- third/tensorflow/tensorflow-ops
+- third/tensorflow/tensorflow-proto
+
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
@@ -45,6 +51,9 @@ extra-deps:
 - opencv-0.0.1.1
 - repa-3.4.1.2
 - lzma-0.0.0.3
+- proto-lens-0.2.2.0
+- proto-lens-descriptors-0.2.2.0
+- proto-lens-protoc-0.2.2.3
 
 # Override default flag values for local packages and extra-deps
 flags: {}
