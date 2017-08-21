@@ -105,9 +105,13 @@ toLabel = let to (V2 a b) = fromIntegral <$> [a,b]
            in V.fromList . (1:) . concat . map to
 
 -- | transform from label
-fromLabel :: Label -> [V2 Int32]
-fromLabel = let from (a:b:_) = fromIntegral <$> V2 a b
-            in map from . chunksOf 2 . tail . V.toList
+fromLabel :: Label -> [Maybe (V2 Int32)]
+fromLabel label =
+  let from (a:b:_) = if status
+                     then Just $ fromIntegral <$> V2 a b
+                     else Nothing
+      status = V.head label >  0
+  in map from . chunksOf 2 . tail $ V.toList label
 
 -- | render the traning data(file)
 renderFileI :: FilePath -> [RecordImg 3] -> IO ()

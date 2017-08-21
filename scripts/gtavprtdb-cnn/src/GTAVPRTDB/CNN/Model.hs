@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
-
+{-# LANGUAGE TypeFamilies    #-}
 
 
 {- |
@@ -24,10 +24,12 @@ module GTAVPRTDB.CNN.Model
   ) where
 
 import           Data.Int
+import           Data.List.Split
 import           Data.Maybe
 import qualified Data.Vector            as V
 import           GTAVPRTDB.Binary       (fromLabel)
 import           GTAVPRTDB.CNN.Internal
+import           GTAVPRTDB.CNN.Training
 import           GTAVPRTDB.Types        (PointOffset (..))
 import qualified TensorFlow.Core        as TF
 import qualified TensorFlow.GenOps.Core as TF (less, sqrt, square, sum)
@@ -108,13 +110,22 @@ data KeyPointModel
                             -> TF.TensorData Int32 -- ^ labels
                             -> TF.Session ()
                   , kpInfer :: TF.TensorData Float -- ^ images
-                            -> TF.Session (Maybe (PointOffset Int32))
+                            -> TF.Session (V.Vector [Int32])
                   , kpErrRt :: TF.TensorData Float -- ^ images
                             -> TF.TensorData Int32 -- ^ labels
                             -> TF.Session Float
                   , kpParam :: TF.Session KeyPointParameters
                   }
 
+instance Training KeyPointModel where
+  type TInput KeyPointModel = Float
+  type TLabel KeyPointModel = Int32
+  type TParam KeyPointModel = KeyPointParameters
+  train = kpTrain
+  infer = kpInfer
+  errRt = kpErrRt
+  param = kpParam
+  sizes = undefined
 
 createKPModel :: Maybe KeyPointParameters -- ^ parameters
               -> TF.Build KeyPointModel   -- ^ model
@@ -138,10 +149,8 @@ createKPModel p = do
                          , TF.feed labels lF
                          ] trainStep
     , kpInfer = \imF -> do
-        x <- TF.runWithFeeds [TF.feed images imF] outI
-        return $ if V.head x > 0
-          then Just $ fromLabel $ V.map fromIntegral $ V.tail x
-          else Nothing
+       x <- V.toList <$> TF.runWithFeeds [TF.feed images imF] outI
+       return $ V.fromList $ chunksOf 9 x
     , kpErrRt = \imF lF ->
         TF.unScalar <$> TF.runWithFeeds [ TF.feed images imF
                                         , TF.feed labels lF
