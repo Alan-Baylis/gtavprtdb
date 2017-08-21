@@ -81,7 +81,7 @@ generateSeed a b g x y i p = Seed p i $ check a b g x y
               is = and . map (\(V2 x y) -> x < 960 && x >= 0 && y < 536 && y >= 0)
                 . perspectiveTransformKeyPoints
               move' = concat $ map (\(V2 x y) -> [x,y]) move
-          in (if is move && preIs then 1 else 0) : move'
+          in (if is move && preIs then 10000 else -10000) : move'
 
 
 -- | generate the image with seed.
