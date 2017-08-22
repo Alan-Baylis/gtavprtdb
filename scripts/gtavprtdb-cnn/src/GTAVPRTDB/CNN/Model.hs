@@ -43,24 +43,22 @@ import qualified TensorFlow.Variable    as TF
 --
 
 -- | convolution layout
-kpConvLayer :: TF.MonadBuild m
-            => (Int64,Int64) -- ^ ksize for maxpool
+kpConvLayer :: (Int64,Int64) -- ^ ksize for maxpool
             -> (Int64,Int64) -- ^ stride for maxpool
             -> TF.Variable Float -- ^ weight, shape = [x,y,input_size,feature_size]
             -> TF.Variable Float -- ^ bias, shape = [feature_size]
             -> TF.Tensor t Float -- ^ input, shape = [w,h,f]
-            -> m (TF.Tensor TF.Build Float) -- ^ output
-kpConvLayer k s w b i = return pool
+            -> TF.Tensor TF.Build Float -- ^ output
+kpConvLayer k s w b i = pool
   where conv = TF.relu $ i `conv2D` TF.readValue w `TF.add`  TF.readValue b
         pool = maxPool k s conv
 
 -- | full connected layout
-kpFullLayer :: TF.MonadBuild m
-            => TF.Variable Float -- ^ weight, shape = [x,y]
+kpFullLayer :: TF.Variable Float -- ^ weight, shape = [x,y]
             -> TF.Variable Float -- ^ bias, shape = [y]
             -> TF.Tensor t Float -- ^ input, shape = [w,h,f]
-            -> m (TF.Tensor TF.Build Float) -- ^ output
-kpFullLayer w b i = return $ TF.relu $ i `TF.matMul` TF.readValue w `TF.add`  TF.readValue b
+            -> TF.Tensor TF.Build Float -- ^ output
+kpFullLayer w b i = TF.relu $ i `TF.matMul` TF.readValue w `TF.add`  TF.readValue b
 
 data KeyPointParameters
   = KeyPointParameters { kpConv1 :: ([Float],[Float]) -- ^ weight and bias for the first layer: convolution layer
@@ -106,42 +104,44 @@ createKPParameters (Just KeyPointParameters{..}) = do
 
 -- | model of key point
 data KeyPointModel
-  = KeyPointModel { kpTrain :: TF.TensorData Float -- ^ images
-                            -> TF.TensorData Int32 -- ^ labels
+  = KeyPointModel { kpTrain :: TF.TensorData KPInput -- ^ images
+                            -> TF.TensorData KPLabel -- ^ labels
                             -> TF.Session ()
-                  , kpInfer :: TF.TensorData Float -- ^ images
-                            -> TF.Session (V.Vector [Int32])
-                  , kpErrRt :: TF.TensorData Float -- ^ images
-                            -> TF.TensorData Int32 -- ^ labels
+                  , kpInfer :: TF.TensorData KPInput -- ^ images
+                            -> TF.Session (V.Vector [KPLabel])
+                  , kpErrRt :: TF.TensorData KPInput -- ^ images
+                            -> TF.TensorData KPLabel -- ^ labels
                             -> TF.Session Float
                   , kpParam :: TF.Session KeyPointParameters
                   }
 
 instance Training KeyPointModel where
-  type TInput KeyPointModel = Float
+  type TInput KeyPointModel = Int32
   type TLabel KeyPointModel = Int32
   type TParam KeyPointModel = KeyPointParameters
   train = kpTrain
   infer = kpInfer
   errRt = kpErrRt
   param = kpParam
-  sizes = undefined
+  sizes _ = (960,536,3,9)
 
 createKPModel :: Maybe KeyPointParameters -- ^ parameters
               -> TF.Build KeyPointModel   -- ^ model
 createKPModel p = do
   images <- TF.placeholder [-1,960,536,3]
   w1:b1:w2:b2:w3:b3:w4:b4:_ <- createKPParameters p
-  out <- kpConvLayer (4,6) (4,6) w1 b1 images >>=
-    kpConvLayer (8,4) (8,4) w2 b2 >>=
-    kpFullLayer w3 b3 >>=
-    kpFullLayer w4 b4
+  let out = kpFullLayer w4 b4 $                  -- /|\
+            kpFullLayer w3 b3 $                  --  |
+            reshape $                            --  |
+            kpConvLayer (8,4) (8,4) w2 b2 $      --  |
+            kpConvLayer (4,6) (4,6) w1 b1 images --  |
+      reshape x = TF.reshape x $ TF.constant [2] [-1,40960 :: Int32]
   labels <- TF.placeholder [-1,9] :: TF.Build (TF.Tensor TF.Value Int32)
-  let outI = TF.cast out :: TF.Tensor TF.Build Int32
-      loss = TF.sqrt $ TF.reduceMean $ TF.square $ (TF.cast labels) `TF.sub` out
+  let -- outI = TF.cast out :: TF.Tensor TF.Build Int32
+      loss = {- TF.sqrt $ -} TF.reduceMean $ TF.square $ (TF.cast labels :: TF.Tensor TF.Build Float) `TF.sub` out
       params = w1:b1:w2:b2:w3:b3:w4:b4:[]
   trainStep <- TF.minimizeWith TF.adam loss params
-  let diffPredictions = TF.sum (TF.scalar (0 :: Int32)) (TF.abs $ outI `TF.sub` labels) `TF.less` TF.scalar 30
+  let diffPredictions = TF.sum (TF.scalar (0 :: Int32)) (TF.abs $ out `TF.sub` labels) `TF.less` TF.scalar 30
   errorRateTensor <- TF.render $ 1 - TF.reduceMean (TF.cast diffPredictions)
   return KeyPointModel
     { kpTrain = \imF lF ->
@@ -164,3 +164,13 @@ createKPModel p = do
          <*> ((,) <$> trans w3 <*> trans b3)
          <*> ((,) <$> trans w4 <*> trans b4)
     }
+
+
+{- |
+
+@
+img <- (\xs -> map (fmap fromIntegral) xs :: [V.Vector Float]) <$> parseFileI "out.tdz"
+label <- (\xs -> map (fmap fromIntegral) xs :: [V.Vector Int32]) <$> parseFileL "out.tlz"
+rt <- training (createKPModel Nothing) 1000 img label img label
+@
+-}

@@ -67,20 +67,21 @@ training :: ( Training a
             , TF.TensorDataType V.Vector (TLabel a)
             , TF.TensorDataType V.Vector (TInput a)
             )
-         => a -- model
-         -> Int
-         -> [[TInput a]] -- ^ training data
-         -> [[TLabel a]] -- ^ training label
-         -> [[TInput a]] -- ^ testing data
-         -> [[TLabel a]] -- ^ testing label
+         => TF.Build a -- ^ model
+         -> Int -- ^ times
+         -> [V.Vector (TInput a)] -- ^ training data
+         -> [V.Vector (TLabel a)] -- ^ training label
+         -> [V.Vector (TInput a)] -- ^ testing data
+         -> [V.Vector (TLabel a)] -- ^ testing label
          -> IO (Float,TParam a)
-training model times trd trl ted tel = TF.runSession $ do
+training modelM times trd trl ted tel = TF.runSession $ do
+  model <- TF.build modelM
   let times'              = times `div`100
       (numW,numH,numC,numRT)    = sizes model
       encodeInputBatch xs =
-        TF.encodeTensorData [genericLength xs, numW, numH, numC] $ V.fromList $ concat xs
+        TF.encodeTensorData [genericLength xs, numW, numH, numC] $ mconcat xs
       encodeLabelBatch xs =
-        TF.encodeTensorData [genericLength xs,numRT] $ V.fromList $ concat xs
+        TF.encodeTensorData [genericLength xs,numRT] $ mconcat xs
       batchSize           = 100
       selectInputBatch i xs = take batchSize $ drop (i * batchSize) (cycle xs)
       selectLabelBatch i xs = take batchSize $ drop (i * batchSize) (cycle xs)
@@ -98,3 +99,13 @@ training model times trd trl ted tel = TF.runSession $ do
   p <- param model
   return (errTest,p)
 
+
+
+{- |
+
+@
+img <- (\xs -> map (fmap fromIntegral) xs :: [V.Vector Float]) <$> parseFileI "out.tdz"
+label <- (\xs -> map (fmap fromIntegral) xs :: [V.Vector Int32]) <$> parseFileL "out.tlz"
+rt <- training (createKPModel Nothing) 1000 img label img label
+@
+-}
