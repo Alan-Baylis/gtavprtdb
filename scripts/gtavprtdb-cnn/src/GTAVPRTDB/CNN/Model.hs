@@ -127,13 +127,13 @@ instance Training KeyPointModel where
   infer = kpInfer
   errRt = kpErrRt
   param = kpParam
-  sizes _ = (3,536,960,9)
+  sizes _ = (536,960,3,9)
 
 createKPModel :: Maybe KeyPointParameters -- ^ parameters
               -> TF.Build KeyPointModel   -- ^ model
 createKPModel p = do
-  images' <- TF.placeholder [-1,3,536,960]
-  let images = TF.transpose images' $ TF.constant [4] [0,2,3,1 :: Int32]
+  images' <- TF.placeholder [-1,536,960,3]
+  let images = TF.transpose images' $ TF.constant [4] [0,2,1,3 :: Int32]
   w1:b1:w2:b2:w3:b3:w4:b4:_ <- createKPParameters p
   let out = kpFullLayer w4 b4 $                  -- /|\
             kpFullLayer w3 b3 $                  --  |
