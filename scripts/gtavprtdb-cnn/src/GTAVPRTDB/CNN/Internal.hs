@@ -20,6 +20,7 @@ This module includes some basic method
 module GTAVPRTDB.CNN.Internal
   ( conv2D
   , maxPool
+  , cast
   , randomParam
   ) where
 
@@ -58,6 +59,12 @@ maxPool (k1,k2) (s1,s2) = TF.maxPool'
     . (TF.opAttr "padding"     .~ ("SAME" :: B.ByteString))
     . (TF.opAttr "data_format" .~ ("NHWC" :: B.ByteString))
   )
+cast :: ( TF.TensorType dst
+        , TF.TensorType src
+        )
+     =>  TF.Tensor v src -> TF.Tensor TF.Build dst
+cast = TF.cast' (TF.opAttr "name" .~ ("999" :: B.ByteString))
+
 
 -- | randomParameters
 randomParam :: Int64 -- ^ width

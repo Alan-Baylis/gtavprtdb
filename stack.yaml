@@ -40,6 +40,9 @@ packages:
 - scripts/gtavprtdb-exec
 - scripts/gtavprtdb-cnn
 - third/tensorflow/tensorflow
+- third/tensorflow/tensorflow-logging
+- third/tensorflow/tensorflow-records
+- third/tensorflow/tensorflow-records-conduit
 - third/tensorflow/tensorflow-core-ops
 - third/tensorflow/tensorflow-ops
 - third/tensorflow/tensorflow-proto
@@ -54,6 +57,8 @@ extra-deps:
 - proto-lens-0.2.2.0
 - proto-lens-descriptors-0.2.2.0
 - proto-lens-protoc-0.2.2.3
+- snappy-framing-0.1.1
+- snappy-0.2.0.2
 
 # Override default flag values for local packages and extra-deps
 flags: {}
