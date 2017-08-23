@@ -138,8 +138,8 @@ createKPModel p = do
   let out = kpFullLayer w4 b4 $                  -- /|\
             kpFullLayer w3 b3 $                  --  |
             reshape $                            --  |
-            kpConvLayer (8,4) (8,4) w2 b2 $      --  |
-            kpConvLayer (4,6) (4,6) w1 b1        --  |
+            kpConvLayer (4,8) (4,8) w2 b2 $      --  |
+            kpConvLayer (6,4) (6,4) w1 b1        --  |
             images
       reshape x = TF.reshape x $ TF.constant [2] [-1,42432 :: Int32]
   labels <- TF.placeholder [-1,9] :: TF.Build (TF.Tensor TF.Value Float)
