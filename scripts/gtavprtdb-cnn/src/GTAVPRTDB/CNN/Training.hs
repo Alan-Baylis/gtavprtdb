@@ -67,6 +67,7 @@ training :: ( Training a
             , TF.OneOf '[Float,Int32] (TLabel a)
             , TF.TensorDataType V.Vector (TLabel a)
             , TF.TensorDataType V.Vector (TInput a)
+            , Show (TLabel a)
             )
          => TF.Build a -- ^ model
          -> Int -- ^ times
@@ -101,6 +102,7 @@ training modelM times batchSize trd trl ted tel = TF.runSession $ TF.withEventWr
       tlabels = encodeLabelBatch tel
   errTest <- errRt model  timages tlabels
   liftIO $ putStrLn $ "training error(testing set): " ++ show (errTest * 100) ++ "%\n"
+  infer model timages >>= (\x -> liftIO $ print x)
   p <- param model
   return (errTest,p)
 

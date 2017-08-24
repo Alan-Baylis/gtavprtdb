@@ -132,15 +132,14 @@ instance Training KeyPointModel where
 createKPModel :: Maybe KeyPointParameters -- ^ parameters
               -> TF.Build KeyPointModel   -- ^ model
 createKPModel p = do
-  images' <- TF.placeholder [-1,536,960,3]
-  let images = TF.transpose images' $ TF.constant [4] [0,2,1,3 :: Int32]
+  images <- TF.placeholder [-1,536,960,3]
   w1:b1:w2:b2:w3:b3:w4:b4:_ <- createKPParameters p
   let out = kpFullLayer w4 b4 $                  -- /|\
             kpFullLayer w3 b3 $                  --  |
             reshape $                            --  |
-            kpConvLayer (4,8) (4,8) w2 b2 $      --  |
-            kpConvLayer (6,4) (6,4) w1 b1        --  |
-            images
+            kpConvLayer (8,4) (8,4) w2 b2 $      --  |
+            kpConvLayer (4,6) (4,6) w1 b1        --  |
+            images                               --  |
       reshape x = TF.reshape x $ TF.constant [2] [-1,42432 :: Int32]
   labels <- TF.placeholder [-1,9] :: TF.Build (TF.Tensor TF.Value Float)
   let -- outI = TF.cast out :: TF.Tensor TF.Build Int32
@@ -149,19 +148,19 @@ createKPModel p = do
   trainStep <- TF.minimizeWith TF.adam loss params
   let diff            = TF.sum (TF.abs $ out `TF.sub` labels) (TF.scalar (1 :: Int32))
       diffAll         = TF.mean diff (TF.scalar (0 :: Int32))
-      diffPredictions = diff `TF.less` TF.scalar 30
+      diffPredictions = diffAll `TF.less` TF.scalar 30
   -- errorRateTensor <- TF.render $ 1 - TF.reduceMean (TF.cast diffPredictions)
   return KeyPointModel
     { kpTrain = \imF lF ->
-        TF.runWithFeeds_ [ TF.feed images' imF
-                         , TF.feed labels  lF
+        TF.runWithFeeds_ [ TF.feed images imF
+                         , TF.feed labels lF
                          ] trainStep
     , kpInfer = \imF -> do
-       x <- V.toList <$> TF.runWithFeeds [TF.feed images' imF] out
+       x <- V.toList <$> TF.runWithFeeds [TF.feed images imF] out
        return $ V.fromList $ chunksOf 9 x
     , kpErrRt = \imF lF ->
-        TF.unScalar <$> TF.runWithFeeds [ TF.feed images' imF
-                                        , TF.feed labels  lF
+        TF.unScalar <$> TF.runWithFeeds [ TF.feed images imF
+                                        , TF.feed labels lF
                                         ] diffAll
     , kpParam =
       let trans :: TF.Variable Float -> TF.Session [Float]
