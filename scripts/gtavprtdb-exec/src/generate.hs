@@ -4,6 +4,7 @@
 
 import           Control.Monad
 import           Data.Maybe
+import qualified Data.Text              as T
 import           GTAVPRTDB.Binary
 import           GTAVPRTDB.CV
 import           GTAVPRTDB.Database
@@ -51,6 +52,6 @@ main = do
       renderFileL (gOut ++ ".tlz") ls
     'd':'b':'@':param -> do
       pipe <- connect (readHostPort param)
-      zipWithM_ (writeData pipe master "master" "training") rs ls
+      zipWithM_ (writeData pipe master "master" (T.pack gOut)) rs ls
 
 
