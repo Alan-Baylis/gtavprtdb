@@ -62,6 +62,9 @@ class Training a where
         => a -- ^ item
         -> (i,i,i,i)
 
+-- | get the data
+type DataGetter m i l = m ([V.Vector i],[V.Vector l])
+
 training :: ( Training a
             , TF.OneOf '[Word16,Double,Float] (TInput a)
             , TF.OneOf '[Float,Int32] (TLabel a)
@@ -72,37 +75,35 @@ training :: ( Training a
          => TF.Build a -- ^ model
          -> Int -- ^ times
          -> Int -- ^ batch size
-         -> [V.Vector (TInput a)] -- ^ training data
-         -> [V.Vector (TLabel a)] -- ^ training label
-         -> [V.Vector (TInput a)] -- ^ testing data
-         -> [V.Vector (TLabel a)] -- ^ testing label
-         -> IO (Float,TParam a)
-training modelM times batchSize trd trl ted tel = TF.runSession $ TF.withEventWriter ".log" $ \eventWriter -> do
+         -> DataGetter TF.Session (TInput a) (TLabel a) -- ^ training data getter
+         -> DataGetter TF.Session (TInput a) (TLabel a) -- ^ testing data getter
+         -> TF.Session (Float,TParam a)
+training modelM times batchSize trainingGetter testingGetter = TF.withEventWriter ".log" $ \eventWriter -> do
   let al = 1
   liftIO $ putStrLn "Begin"
   summaryTensor <- TF.build TF.mergeAllSummaries
   model <- TF.build modelM
   TF.logGraph eventWriter modelM
-  let times'              = times `div` al
-      (numH,numW,numC,numRT)    = sizes model
-      encodeInputBatch xs =
+  let times'                 = times `div` al
+      (numH,numW,numC,numRT) = sizes model
+      encodeInputBatch xs    =
         TF.encodeTensorData [genericLength xs, numH, numW, numC] $ mconcat xs
-      encodeLabelBatch xs =
+      encodeLabelBatch xs    =
         TF.encodeTensorData [genericLength xs,numRT] $ mconcat xs
-      selectInputBatch i xs = take batchSize $ drop (i * batchSize) (cycle xs)
-      selectLabelBatch i xs = take batchSize $ drop (i * batchSize) (cycle xs)
   forM_ ([0..times] :: [Int]) $ \i -> do
-    let inputs = encodeInputBatch (selectInputBatch i trd)
-        labels = encodeLabelBatch (selectLabelBatch i trl)
+    (inputs',labels') <- trainingGetter
+    let inputs = encodeInputBatch inputs'
+        labels = encodeLabelBatch labels'
     train model inputs labels
     when (i `mod` al == 0) $ do
       err <- errRt model inputs labels
       liftIO $ putStrLn $ show (i `div` al) ++ "/" ++ show times' ++ " training error: " ++ show err ++ "\n"
-  let timages = encodeInputBatch ted
-      tlabels = encodeLabelBatch tel
-  errTest <- errRt model  timages tlabels
+  (tinputs',tlabels') <- testingGetter
+  let tinputs = encodeInputBatch tinputs'
+      tlabels = encodeLabelBatch tlabels'
+  errTest <- errRt model  tinputs tlabels
   liftIO $ putStrLn $ "training error(testing set): " ++ show (errTest * 100) ++ "%\n"
-  infer model timages >>= (\x -> liftIO $ print x)
+  infer model tinputs >>= (\x -> liftIO $ print x)
   p <- param model
   return (errTest,p)
 

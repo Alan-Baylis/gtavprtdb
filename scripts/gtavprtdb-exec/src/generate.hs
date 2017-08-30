@@ -1,9 +1,12 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
 
+import           Control.Monad
 import           Data.Maybe
 import           GTAVPRTDB.Binary
 import           GTAVPRTDB.CV
+import           GTAVPRTDB.Database
 import           GTAVPRTDB.Generate
 import           GTAVPRTDB.Types
 import           System.Console.CmdArgs
@@ -14,7 +17,7 @@ import           System.IO
 data Generate = Generate { gFilePath :: FilePath
                          , gSize     :: Maybe Int
                          , gOut      :: FilePath
-                         , gFormat   :: Bool
+                         , gFormat   :: String
                          }
               deriving (Data,Show)
 
@@ -25,7 +28,7 @@ generate = Generate { gFilePath = "."
                       &= name "s"
                     , gOut = ".out"
                       &= name "o"
-                    , gFormat = False
+                    , gFormat = "binary"
                       &= name "f"
                     }
 
@@ -37,14 +40,17 @@ main = do
         Just i -> take i
         _      -> id
   (rs,ls) <- generateImgs gFilePath $ size files
-  if gFormat
-    then do
-    let ms = zipWith drawKeyPoint (fromLabel <$> ls) rs
-    createDirectoryIfMissing True gOut
-    mapM_ (\(i,x) -> saveAnyImg OutputBmp (gOut ++ "/" ++ show i ++ ".bmp") x) $
-      zip [0..] ms
-    else do
-    renderFileI (gOut ++ ".tdz") rs
-    renderFileL (gOut ++ ".tlz") ls
+  case gFormat of
+    "figures" -> do
+      let ms = zipWith drawKeyPoint (fromLabel <$> ls) rs
+      createDirectoryIfMissing True gOut
+      mapM_ (\(i,x) -> saveAnyImg OutputBmp (gOut ++ "/" ++ show i ++ ".bmp") x) $
+        zip [0..] ms
+    "binary" -> do
+      renderFileI (gOut ++ ".tdz") rs
+      renderFileL (gOut ++ ".tlz") ls
+    'd':'b':'@':param -> do
+      pipe <- connect (readHostPort param)
+      zipWithM_ (writeData pipe master "master" "training") rs ls
 
 
