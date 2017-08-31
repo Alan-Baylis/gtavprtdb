@@ -1,6 +1,7 @@
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TypeFamilies    #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE TypeFamilies      #-}
 
 
 {- |
@@ -21,16 +22,21 @@ module GTAVPRTDB.CNN.Model
   ( KeyPointParameters(..)
   , KeyPointModel(..)
   , createKPModel
+  , trainingData
   ) where
 
+import           Control.Monad
+import           Control.Monad.Trans
 import           Data.Int
+import           Data.IORef
 import           Data.List.Split
 import           Data.Maybe
 import qualified Data.Vector            as V
 import           GTAVPRTDB.Binary       (fromLabel)
 import           GTAVPRTDB.CNN.Internal
 import           GTAVPRTDB.CNN.Training
-import           GTAVPRTDB.Types        (PointOffset (..))
+import           GTAVPRTDB.Database
+import           GTAVPRTDB.Types        (DataGetter, PointOffset (..))
 import qualified TensorFlow.Core        as TF
 import qualified TensorFlow.GenOps.Core as TF (less, sqrt, square, sum)
 import qualified TensorFlow.Minimize    as TF
@@ -172,6 +178,23 @@ createKPModel p = do
          <*> ((,) <$> trans w4 <*> trans b4)
     }
 
+
+trainingData :: Pipe -> Collection -> Int -> IORef Cursor ->  DataGetter TF.Session KPInput KPLabel
+trainingData pipe collection batchSize cursorRef = do
+  cursor        <- liftIO $ readIORef cursorRef
+  (imgs,labels) <- readBatchImageCursor pipe master "master" batchSize cursor
+  let len = length imgs
+      renew = do
+        closeImageCursor pipe master "master" cursor
+        newCursor <- openImageCursor pipe master "master" collection
+        liftIO $ writeIORef cursorRef newCursor
+  when (len < batchSize) renew
+  if len /= 0
+    then do
+    return ( map (fmap fromIntegral) imgs
+           , map (fmap fromIntegral) labels
+           )
+    else trainingData pipe collection batchSize cursorRef
 
 {- |
 

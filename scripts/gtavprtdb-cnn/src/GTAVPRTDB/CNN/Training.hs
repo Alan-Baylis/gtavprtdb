@@ -31,7 +31,7 @@ import qualified Data.Vector            as V
 import           Data.Word
 import           GTAVPRTDB.Binary       (fromLabel)
 import           GTAVPRTDB.CNN.Internal
-import           GTAVPRTDB.Types        (PointOffset (..))
+import           GTAVPRTDB.Types        (DataGetter, PointOffset (..))
 import qualified TensorFlow.Core        as TF
 import qualified TensorFlow.GenOps.Core as TF (less, sqrt, square, sum)
 import qualified TensorFlow.Logging     as TF
@@ -61,9 +61,6 @@ class Training a where
   sizes :: Integral i
         => a -- ^ item
         -> (i,i,i,i)
-
--- | get the data
-type DataGetter m i l = m ([V.Vector i],[V.Vector l])
 
 training :: ( Training a
             , TF.OneOf '[Word16,Double,Float] (TInput a)
@@ -106,6 +103,8 @@ training modelM times batchSize trainingGetter testingGetter = TF.withEventWrite
   infer model tinputs >>= (\x -> liftIO $ print x)
   p <- param model
   return (errTest,p)
+
+
 
 
 

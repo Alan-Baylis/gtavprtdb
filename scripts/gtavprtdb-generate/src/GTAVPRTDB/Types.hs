@@ -31,6 +31,10 @@ module GTAVPRTDB.Types
     --
     -- $const
   , fontList
+    -- * others
+    --
+    -- TODO
+  , DataGetter
     -- * re-export
     --
     -- $reexport
@@ -113,3 +117,7 @@ type Label = V.Vector Int16
 fontList :: String
 fontList = ['0'..'9'] ++ ['A'..'Z'] ++ ['_']
 
+
+
+-- | get the data
+type DataGetter m i l = m ([V.Vector i],[V.Vector l])

@@ -104,3 +104,4 @@ dataToDoc (img',label') =
   in [ "label" =: label
      , "image" =: bin
      ]
+
